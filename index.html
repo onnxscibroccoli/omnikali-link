@@ -108,7 +108,7 @@
     <script>
       const W = 1280, H = 720, TAP = 12, LONG_MS = 420;
       const POINTER = "https://raw.githubusercontent.com/onnxscibroccoli/omnikali-link/main/omnikali.json";
-      const FALLBACK = "https://lay-years-electricity-heavy.trycloudflare.com";
+      const FALLBACK = "https://alcohol-sand-dispatched-easily.trycloudflare.com";
       const stage = document.getElementById("stage");
       const layer = document.getElementById("layer");
       const imgs = [document.getElementById("f0"), document.getElementById("f1")];
@@ -133,17 +133,25 @@
       let inflight = false;
       let paused = false;
       let pollTimer = 0;
-      let lastRtt = 400;
+      let lastRtt = 200;
       let ORIGIN = "";
       let misses = 0;
       let resolving = false;
-      try { ORIGIN = localStorage.getItem("omni-origin") || ""; } catch (e) { ORIGIN = ""; }
 
       function remoteMode() {
         return location.hostname.endsWith(".vercel.app");
       }
+      function remember(url) {
+        ORIGIN = url;
+        try { localStorage.setItem("omni-origin", url); } catch (e) {}
+      }
+      function forget() {
+        ORIGIN = "";
+        try { localStorage.removeItem("omni-origin"); } catch (e) {}
+      }
       function api(path) {
-        return (remoteMode() && ORIGIN ? ORIGIN : "") + path;
+        if (remoteMode()) return ORIGIN ? ORIGIN + path : null;
+        return path;
       }
       function okOrigin(value) {
         try {
@@ -157,14 +165,14 @@
       async function probe(url) {
         try {
           const ac = new AbortController();
-          const t = setTimeout(() => ac.abort(), 1600);
+          const t = setTimeout(() => ac.abort(), 900);
           const r = await fetch(url + "/api/desktop", { method: "HEAD", cache: "no-store", signal: ac.signal, headers: { Accept: "image/jpeg" } });
           clearTimeout(t);
           const type = (r.headers.get("content-type") || "");
           if (r.status === 304 || (r.ok && type.includes("image"))) return true;
           if (r.status === 404 || r.status === 405 || r.status === 501) {
             const ac2 = new AbortController();
-            const t2 = setTimeout(() => ac2.abort(), 1600);
+            const t2 = setTimeout(() => ac2.abort(), 900);
             const r2 = await fetch(url + "/api/desktop", { cache: "no-store", signal: ac2.signal, headers: { Accept: "image/jpeg", "If-None-Match": '"probe"' } });
             clearTimeout(t2);
             return r2.status === 304 || (r2.ok && (r2.headers.get("content-type") || "").includes("image"));
@@ -177,7 +185,7 @@
         resolving = true;
         try {
           const cands = [];
-          if (okOrigin(ORIGIN)) cands.push(ORIGIN);
+          if (okOrigin(FALLBACK)) cands.push(FALLBACK);
           const extras = await Promise.all([
             fetch("/origin.json", { cache: "no-store" }).then((r) => r.json()).then((j) => j && j.url).catch(() => null),
             fetch(POINTER, { cache: "no-store" }).then((r) => r.json()).then((j) => j && j.url).catch(() => null),
@@ -185,14 +193,13 @@
           for (const u of extras) {
             if (okOrigin(u)) cands.push(String(u).replace(/\/$/, ""));
           }
-          if (okOrigin(FALLBACK)) cands.push(FALLBACK);
+          const cached = (() => { try { return localStorage.getItem("omni-origin") || ""; } catch (e) { return ""; } })();
+          if (okOrigin(cached)) cands.push(cached);
           const uniq = [...new Set(cands)];
           const found = await Promise.all(uniq.map(async (c) => ({ c, ok: await probe(c) })));
           const live = found.find((x) => x.ok);
-          if (live) {
-            ORIGIN = live.c;
-            try { localStorage.setItem("omni-origin", ORIGIN); } catch (e) {}
-          }
+          if (live) remember(live.c);
+          else forget();
         } finally {
           resolving = false;
         }
@@ -226,9 +233,12 @@
         if (send) post({ op: "move", x, y });
       }
       function post(body) {
-        const run = () => fetch(api("/api/desktop"), {
+        const url = api("/api/desktop");
+        if (!url) return;
+        const run = () => fetch(url, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          mode: "cors",
+          headers: { "Content-Type": "text/plain" },
           body: JSON.stringify(body),
         }).then(() => undefined, () => undefined);
         if (body.op === "move" || body.op === "scroll") { void run(); return; }
@@ -246,18 +256,29 @@
           pollTimer = setTimeout(() => void tick(), 800);
           return;
         }
+        const remote = remoteMode();
+        const url = api("/api/desktop");
+        if (!url) {
+          sync.style.display = "block";
+          if (remote) void resolveOrigin();
+          pollTimer = setTimeout(() => void tick(), 400);
+          return;
+        }
         inflight = true;
         const started = Date.now();
         const ac = new AbortController();
-        const remote = remoteMode();
-        const killer = setTimeout(() => ac.abort(), Math.min(remote ? 4000 : 8000, Math.max(1500, Math.round((lastRtt || 400) * 2))));
+        const abortMs = remote
+          ? Math.min(1500, Math.max(800, Math.round((lastRtt || 200) * 2)))
+          : Math.min(4000, Math.max(1200, Math.round((lastRtt || 200) * 2)));
+        const killer = setTimeout(() => ac.abort(), abortMs);
         let got304 = false;
         let gotFrame = false;
         try {
           const headers = etag ? { "If-None-Match": etag } : {};
-          const res = await fetch(api("/api/desktop"), { cache: "no-store", headers, signal: ac.signal });
+          const res = await fetch(url, { cache: "no-store", mode: "cors", headers, signal: ac.signal });
           if (res.status === 304) {
             lastFrame = Date.now();
+            lastRtt = Math.min(900, Math.max(60, Date.now() - started));
             sync.style.display = "none";
             got304 = true;
             misses = 0;
@@ -265,13 +286,14 @@
           }
           if (!res.ok || !(res.headers.get("content-type") || "").includes("image")) {
             misses += 1;
+            if (remote) { forget(); void resolveOrigin(); }
             if (Date.now() - lastFrame > 6000) sync.style.display = "block";
-            if (misses >= 3) void resolveOrigin();
             return;
           }
           const blob = await res.blob();
           if (blob.size < 1000) return;
           etag = res.headers.get("ETag") || "";
+          lastRtt = Math.min(900, Math.max(60, Date.now() - started));
           const back = front ^ 1;
           const next = URL.createObjectURL(blob);
           imgs[back].onload = () => {
@@ -289,19 +311,17 @@
           misses = 0;
         } catch {
           misses += 1;
+          if (remote) { forget(); void resolveOrigin(); }
           if (Date.now() - lastFrame > 6000) sync.style.display = "block";
-          if (misses >= 3) void resolveOrigin();
         } finally {
           clearTimeout(killer);
           inflight = false;
           if (!paused) {
-            const rtt = Date.now() - started;
-            lastRtt = rtt;
             const wait = got304
-              ? Math.min(remote ? 700 : 400, Math.max(remote ? 180 : 80, Math.round(rtt * (remote ? 0.7 : 0.5))))
+              ? Math.min(remote ? 700 : 400, Math.max(remote ? 180 : 80, Math.round(lastRtt * (remote ? 0.7 : 0.5))))
               : gotFrame
-                ? Math.min(remote ? 450 : 280, Math.max(remote ? 120 : 40, Math.round(rtt * (remote ? 0.4 : 0.25))))
-                : Math.min(2500, Math.max(500, rtt * 2));
+                ? Math.min(remote ? 450 : 280, Math.max(remote ? 120 : 40, Math.round(lastRtt * (remote ? 0.4 : 0.25))))
+                : Math.min(1200, Math.max(400, lastRtt * 2));
             pollTimer = setTimeout(() => void tick(), wait);
           }
         }
@@ -327,7 +347,7 @@
 
       void (async () => {
         if (remoteMode()) {
-          if (!okOrigin(ORIGIN) && okOrigin(FALLBACK)) ORIGIN = FALLBACK;
+          if (okOrigin(FALLBACK)) remember(FALLBACK);
           void resolveOrigin();
         } else {
           imgs[0].src = "/api/desktop";
@@ -339,7 +359,9 @@
       });
       setInterval(() => {
         if (paused || document.visibilityState === "hidden") return;
-        fetch(api("/api/status"), { cache: "no-store" }).catch(() => undefined);
+        const url = api("/api/status");
+        if (!url) return;
+        fetch(url, { cache: "no-store", mode: "cors" }).catch(() => undefined);
       }, 12000);
 
       document.getElementById("zout").onclick = () => { view.scale = clamp(view.scale * 0.85, 0.4, 4); apply(); };
