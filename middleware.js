@@ -1,6 +1,6 @@
 export const config = { matcher: ["/origin.json"] };
 
-const FALLBACK = "https://alcohol-sand-dispatched-easily.trycloudflare.com";
+const FALLBACK = "https://hardcover-segments-fever-jefferson.trycloudflare.com";
 const POINTER = "https://raw.githubusercontent.com/onnxscibroccoli/omnikali-link/main/omnikali.json";
 const DENY = new Set([
   "api.trycloudflare.com",
@@ -24,7 +24,7 @@ function okOrigin(value) {
 async function live(url) {
   try {
     const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 700);
+    const timer = setTimeout(() => ac.abort(), 900);
     const res = await fetch(url + "/api/desktop", { method: "HEAD", cache: "no-store", signal: ac.signal, headers: { Accept: "image/jpeg" } });
     clearTimeout(timer);
     const type = res.headers.get("content-type") || "";
@@ -36,8 +36,9 @@ async function live(url) {
 
 export default async function middleware() {
   const cands = [];
+  if (okOrigin(FALLBACK)) cands.push(FALLBACK);
   const ac = new AbortController();
-  const timer = setTimeout(() => ac.abort(), 800);
+  const timer = setTimeout(() => ac.abort(), 600);
   try {
     const res = await fetch(POINTER, { cache: "no-store", signal: ac.signal });
     const body = await res.json();
@@ -47,13 +48,10 @@ export default async function middleware() {
   } finally {
     clearTimeout(timer);
   }
-  if (okOrigin(FALLBACK)) cands.push(FALLBACK);
   const uniq = [...new Set(cands)];
-  let origin = null;
-  for (const c of uniq) {
-    if (await live(c)) { origin = c; break; }
-  }
-  if (!origin) origin = uniq.find((c) => c === FALLBACK) || uniq[0] || null;
+  const checks = await Promise.all(uniq.map(async (c) => ({ c, ok: await live(c) })));
+  let origin = (checks.find((x) => x.ok) || {}).c || null;
+  if (!origin && okOrigin(FALLBACK)) origin = FALLBACK;
   if (!okOrigin(origin)) {
     return new Response(JSON.stringify({ name: "omnikali", url: null }), {
       status: 503,
