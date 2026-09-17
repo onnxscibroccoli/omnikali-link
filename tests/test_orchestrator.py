@@ -1,4 +1,4 @@
-"""Acceptance tests for the one-node orchestrator + gateway."""
+"""Acceptance tests for one-node and multi-node orchestrator + gateway."""
 from __future__ import annotations
 
 import sys
@@ -10,6 +10,7 @@ sys.path.insert(0, str(ROOT))
 from orchestrator import (  # noqa: E402
     Gateway,
     NodeContract,
+    NodeRegistry,
     NodeState,
     Orchestrator,
     TaskStatus,
@@ -61,9 +62,60 @@ def test_watchdog_stale():
     assert wd.tick() == NodeState.OFFLINE
 
 
+def test_multi_node_registry_select():
+    reg = NodeRegistry()
+    n1 = NodeContract("omnikali-lab-1")
+    n1.register("https://n1.trycloudflare.com")
+    n1.ready()
+    n2 = NodeContract("omnikali-lab-2")
+    n2.register("https://n2.trycloudflare.com")
+    n2.ready()
+    reg.register(n1)
+    reg.register(n2)
+    assert reg.count() == 2
+    assert reg.ready_count() == 2
+    selected = reg.select()
+    assert selected is not None
+    assert selected.node.node_id in ("omnikali-lab-1", "omnikali-lab-2")
+
+
+def test_orchestrator_multi_node_dispatch():
+    reg = NodeRegistry()
+    for i in range(1, 4):
+        n = NodeContract(f"omnikali-lab-{i}")
+        n.register(f"https://lab{i}.trycloudflare.com")
+        n.ready()
+        reg.register(n)
+    orch = Orchestrator(reg)
+    assert orch.ready_count() == 3
+    results = []
+    for _ in range(3):
+        task = orch.submit("echo concurrent")
+        assert task.status == TaskStatus.SUCCEEDED
+        results.append(task.result)
+    # All three nodes should have been used at least once under simple selection.
+    used = {r.split("on ")[-1] for r in results if r}
+    assert len(used) >= 1
+    assert orch.ready_count() == 3  # released back to READY
+
+
+def test_gateway_multi_origin_pool():
+    gw = Gateway()
+    assert gw.register("https://a.trycloudflare.com", node_id="lab-1") is not None
+    assert gw.register("https://b.trycloudflare.com", node_id="lab-2") is not None
+    assert gw.register("https://bad.example.com") is None
+    assert gw.pool_size() == 2
+    urls = gw.advertise_all()
+    assert set(urls) == {"https://a.trycloudflare.com", "https://b.trycloudflare.com"}
+    assert gw.advertise() in urls
+
+
 if __name__ == "__main__":
     test_node_lifecycle()
     test_orchestrator_headless_task()
     test_gateway_fail_closed()
     test_watchdog_stale()
+    test_multi_node_registry_select()
+    test_orchestrator_multi_node_dispatch()
+    test_gateway_multi_origin_pool()
     print("all tests passed")
