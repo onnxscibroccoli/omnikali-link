@@ -6,7 +6,7 @@ Accepts either a single NodeContract or a NodeRegistry.
 """
 from __future__ import annotations
 
-import time
+import subprocess
 from typing import Dict, Optional, Union
 
 from .node_contract import NodeContract, NodeState, Task, TaskStatus
@@ -39,7 +39,7 @@ class Orchestrator:
         try:
             result = self._execute_bounded(task, node)
             task.mark_succeeded(result)
-        except TimeoutError:
+        except (TimeoutError, subprocess.TimeoutExpired):
             task.mark_timed_out()
         except Exception as exc:  # noqa: BLE001 - surface to telemetry
             task.mark_failed(str(exc))
@@ -48,11 +48,9 @@ class Orchestrator:
         return task
 
     def _execute_bounded(self, task: Task, node: NodeContract) -> str:
-        deadline = time.time() + task.timeout_s
-        # Placeholder for the real authenticated control-channel call.
-        if time.time() > deadline:
-            raise TimeoutError("task exceeded bound")
-        return f"ok: executed '{task.command}' on {node.node.node_id}"
+        if node.executor is None:
+            raise RuntimeError("node has no executor configured")
+        return node.executor.run(task.command, task.timeout_s)
 
     def get(self, task_id: str) -> Optional[Task]:
         return self._tasks.get(task_id)

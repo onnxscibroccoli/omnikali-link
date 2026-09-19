@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Protocol
 import time
 import uuid
 
@@ -26,6 +26,10 @@ class TaskStatus(str, Enum):
     SUCCEEDED = "SUCCEEDED"
     FAILED = "FAILED"
     TIMED_OUT = "TIMED_OUT"
+
+
+class Executor(Protocol):
+    def run(self, command: str, timeout_s: float) -> str: ...
 
 
 @dataclass
@@ -83,8 +87,11 @@ class Task:
 class NodeContract:
     """Explicit contract between orchestrator and a single node."""
 
-    def __init__(self, node_id: str = "omnikali-lab-1") -> None:
+    def __init__(
+        self, node_id: str = "omnikali-lab-1", executor: Optional[Executor] = None
+    ) -> None:
         self.node = NodeInfo(node_id=node_id)
+        self.executor = executor
 
     def register(self, endpoint: str, capabilities: Optional[Dict[str, Any]] = None) -> None:
         self.node.endpoint = endpoint

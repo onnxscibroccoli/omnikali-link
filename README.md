@@ -12,14 +12,20 @@ Control plane for one or many Kali nodes:
 |--------|------|
 | `orchestrator/node_contract.py` | Node lifecycle + task model |
 | `orchestrator/registry.py` | Multi-node pool (same interface for 1…N) |
-| `orchestrator/orchestrator.py` | Headless task dispatch (single or registry) |
+| `orchestrator/orchestrator.py` | Bounded task dispatch (single or registry) |
+| `orchestrator/executor.py` | Shell-free allowlisted process execution |
 | `orchestrator/gateway.py` | Health-aware multi-origin registration (fail closed) |
 | `orchestrator/watchdog.py` | Supervisor / stale-node contract |
 | `tests/test_orchestrator.py` | Acceptance tests |
 
 ```bash
-python -m tests.test_orchestrator
+python tests/test_orchestrator.py
+python -m unittest discover -s tests -p 'test_*.py' -v
 ```
+
+The node executes only named argv tuples supplied by the operator. It never
+passes task text to a shell. A node without an executor fails closed instead of
+fabricating a successful result.
 
 ### Dynamic DNS path
 1. Stand up a tunnel (Cloudflare quick tunnel, etc.).

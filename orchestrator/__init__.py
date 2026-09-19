@@ -3,6 +3,7 @@ from .orchestrator import Orchestrator
 from .gateway import Gateway, OriginCandidate
 from .registry import NodeRegistry
 from .watchdog import Watchdog
+from .executor import AllowlistedExecutor, CommandRejected
 
 __all__ = [
     "NodeContract",
@@ -15,4 +16,6 @@ __all__ = [
     "OriginCandidate",
     "NodeRegistry",
     "Watchdog",
+    "AllowlistedExecutor",
+    "CommandRejected",
 ]

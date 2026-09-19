@@ -9,6 +9,7 @@ sys.path.insert(0, str(ROOT))
 
 from orchestrator import (  # noqa: E402
     Gateway,
+    AllowlistedExecutor,
     NodeContract,
     NodeRegistry,
     NodeState,
@@ -16,6 +17,13 @@ from orchestrator import (  # noqa: E402
     TaskStatus,
     Watchdog,
 )
+
+
+def executor():
+    return AllowlistedExecutor(
+        {"echo hello": (sys.executable, "-c", "print('hello')"),
+         "echo concurrent": (sys.executable, "-c", "print('concurrent')")}
+    )
 
 
 def test_node_lifecycle():
@@ -34,13 +42,13 @@ def test_node_lifecycle():
 
 
 def test_orchestrator_headless_task():
-    node = NodeContract()
+    node = NodeContract(executor=executor())
     node.register("https://lab.trycloudflare.com")
     node.ready()
     orch = Orchestrator(node)
     task = orch.submit("echo hello")
     assert task.status == TaskStatus.SUCCEEDED
-    assert "omnikali-lab-1" in (task.result or "")
+    assert task.result == "hello"
     assert orch.node_state() == NodeState.READY
 
 
@@ -82,7 +90,7 @@ def test_multi_node_registry_select():
 def test_orchestrator_multi_node_dispatch():
     reg = NodeRegistry()
     for i in range(1, 4):
-        n = NodeContract(f"omnikali-lab-{i}")
+        n = NodeContract(f"omnikali-lab-{i}", executor=executor())
         n.register(f"https://lab{i}.trycloudflare.com")
         n.ready()
         reg.register(n)
@@ -94,8 +102,7 @@ def test_orchestrator_multi_node_dispatch():
         assert task.status == TaskStatus.SUCCEEDED
         results.append(task.result)
     # All three nodes should have been used at least once under simple selection.
-    used = {r.split("on ")[-1] for r in results if r}
-    assert len(used) >= 1
+    assert results == ["concurrent"] * 3
     assert orch.ready_count() == 3  # released back to READY
 
 
