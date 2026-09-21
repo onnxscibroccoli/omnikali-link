@@ -40,6 +40,7 @@ class NodeInfo:
     capabilities: Dict[str, Any] = field(default_factory=dict)
     endpoint: Optional[str] = None
     healthy: bool = False
+    reservation: Optional[str] = None
 
     def heartbeat(self, state: NodeState, healthy: bool = True) -> None:
         self.state = state
@@ -60,6 +61,7 @@ class Task:
     error: Optional[str] = None
     started_at: Optional[float] = None
     finished_at: Optional[float] = None
+    node_id: Optional[str] = None
 
     @classmethod
     def create(cls, command: str, timeout_s: float = 60.0) -> "Task":
@@ -103,14 +105,26 @@ class NodeContract:
             self.node.heartbeat(NodeState.READY, healthy=True)
 
     def acquire(self) -> bool:
+        if self.node.reservation:
+            return False
         if self.node.state == NodeState.READY and self.node.healthy:
+            self.node.reservation = str(uuid.uuid4())
             self.node.heartbeat(NodeState.BUSY, healthy=True)
             return True
         return False
 
     def release(self, degraded: bool = False) -> None:
+        self.node.reservation = None
         state = NodeState.DEGRADED if degraded else NodeState.READY
         self.node.heartbeat(state, healthy=not degraded)
 
+    def recover(self) -> bool:
+        if self.node.state != NodeState.DEGRADED:
+            return False
+        self.node.reservation = None
+        self.node.heartbeat(NodeState.READY, healthy=True)
+        return True
+
     def offline(self) -> None:
+        self.node.reservation = None
         self.node.heartbeat(NodeState.OFFLINE, healthy=False)
