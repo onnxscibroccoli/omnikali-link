@@ -1,29 +1,55 @@
-# OmniKali workstation
+# OmniKali workstation — how it works
 
-In-browser Kali XFCE session. The local desktop is the product. A remote origin is optional.
+OmniKali is an **in-browser Kali XFCE desktop**. The desktop is local and
+always on. A remote VNC origin is optional. A live HTTPS uplink reaches the
+public internet for browsing and GET/HEAD.
 
-## Surfaces
+## Layers
 
-- **Desktop** — wallpaper, panel, icons, windows. Always boots. Never waits on RFB.
-- **Firefox ESR** — public pages load through the same-origin HTTPS uplink (`/api/uplink?url=`), not a third-party iframe. Direct embeds are blocked by the preview host.
-- **QTerminal** — zsh-shaped builtins. `curl` / `wget` / `ping` use the live uplink. Lab HTTP still hits `10.10.10.0/24`.
-- **GitHub** — reads `onnxscibroccoli/omnikali-link` pointer, lists repos, clones via the public API.
-- **Remote Node** — attaches when `/api/desktop` is healthy. Restart protocol wakes/reboots when the origin is off. Fail-open locally if the tunnel is dead.
+| Layer | What it is | Fail mode |
+|---|---|---|
+| Local XFCE | Wallpaper, panel, windows, Terminal, Firefox, Files, GitHub | Always boots |
+| NodeContract | One interface for 1 → 1,028 nodes (`OFFLINE → ONLINE → READY`) | Watchdog TTL |
+| Restart protocol | Detect → probe → wake ticket → reboot-local → await origin | Local-only if origin is off |
+| Public uplink | Server-side HTTPS GET/HEAD, SSRF-guarded | Private hosts blocked |
+| Firefox ESR | Same-origin `/api/uplink?url=` (not a third-party iframe) | Direct embed often blank |
+| Lab net `10.10.10.0/24` | DVWA, web01, dc01, scanners (nmap, msf, gobuster, sqlmap, nikto) | Isolated range |
 
-## Network split
+## Public internet (live)
 
-| Path | Scope |
-| --- | --- |
-| Firefox, curl, wget, ping | Public HTTPS GET/HEAD. Private IPs and link-local blocked. |
-| nmap, gobuster, sqlmap, nikto, msf | Isolated lab `10.10.10.0/24` only |
-| GitHub | `api.github.com` |
+- Firefox **Uplink** tab loads `GET /api/uplink?url=` so the preview cannot be
+  blocked by `X-Frame-Options`.
+- `curl`, `wget`, and `ping` use the same uplink (HTTPS, not ICMP).
+- Search terms in Firefox go to Bing. DuckDuckGo is rewritten to Bing because
+  that host times out from this node.
+- SSRF guard: no `localhost`, RFC1918, link-local, or userinfo URLs.
+- Cap: ~900 KB body, 12 s timeout, 5 redirects.
 
-Public scanning and exploit tooling stay lab-only. This is an in-browser workstation, not a nested kernel.
+## What this is not
+
+This is **not** a nested Kali kernel. There are no raw sockets, no real ICMP,
+and no public-network scanner. Attack tools stay on the isolated lab. A box
+you own running real Kali is the place for authorized tests against hosts
+you actually control.
+
+## Restart when a remote machine is off
+
+`systemctl restart omnikali-remote` / `omnikali restart` / the Wake control:
+
+1. **detect** — node state
+2. **reprobe** — health check the advertised origin
+3. **wake** — issue a wake ticket
+4. **reboot-local** — `NodeContract.reboot()`
+5. **await-origin** — wait for a live origin
+6. **attached** or **local-only** — desktop stays usable either way
+
+A Cloudflare 521 on a tunnel does not take the local workstation down.
 
 ## Agents
 
-supervisor, orchestrator, gateway-discovery, registry, verification, reservation, recovery, telemetry, desktop-session, shell, filesystem, github-link, lab-network, remote-desktop, power, wake, pointer-sync, public-uplink, docs-sync.
+supervisor, orchestrator, gateway-discovery, registry, verification,
+reservation, recovery, telemetry, desktop-session, shell, filesystem,
+github-link, lab-network, remote-desktop, power, wake, pointer-sync,
+public-uplink, docs-sync.
 
-## Restart when the remote is off
-
-`systemctl restart omnikali-remote` / Wake: detect → reprobe → wake ticket → reboot local contract → await origin → attached or local-only.
+Pointer: `https://raw.githubusercontent.com/onnxscibroccoli/omnikali-link/main/omnikali.json`
