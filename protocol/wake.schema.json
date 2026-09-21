@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/onnxscibroccoli/omnikali-link/protocol/wake.schema.json",
+  "title": "OmniKaliWakeTicket",
+  "type": "object",
+  "required": ["id", "nodeId", "at", "status", "reason"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "nodeId": { "type": "string", "pattern": "^omnikali-lab-[0-9]+$" },
+    "at": { "type": "integer", "minimum": 0 },
+    "origin": { "type": ["string", "null"] },
+    "reason": { "type": "string" },
+    "status": { "enum": ["requested", "awaiting", "cleared"] }
+  },
+  "additionalProperties": false
+}
