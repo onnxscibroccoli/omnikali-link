@@ -1,4 +1,4 @@
-# GitHub Agent Definitions (v1 + multi-node)
+# GitHub Agent Definitions (v1 + multi-node + console)
 
 Agents operate through explicit contracts. Git is the source of truth.
 
@@ -17,9 +17,21 @@ Agents operate through explicit contracts. Git is the source of truth.
 - Updates omnikali.json / discovery only for healthy origins.
 
 ## registry
-- Holds N NodeContracts under the same interface (1 → 1,028).
+- Holds N NodeContracts under the same interface (1 to 1,028).
 - Provides select() / ready_count() for concurrent capacity.
 
 ## verification
 - Runs acceptance tests before any claim of completion.
 - Opens PR rather than silently altering production main.
+
+## reservation
+- Atomic acquire/release so two tasks cannot share a node.
+- Reservation token is required for BUSY; a second acquire fails closed.
+
+## recovery
+- Returns DEGRADED nodes to READY after a clean heartbeat.
+- Does not re-advertise a desktop origin unless gateway health still passes.
+
+## telemetry
+- Records task results, heartbeats, and fail-closed events.
+- Surface for the operator console; not a substitute for Git history.
