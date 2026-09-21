@@ -36,6 +36,23 @@ class NodeRuntimeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.executor.run("say", timeout_s=0)
 
+    def test_double_acquire_is_rejected(self) -> None:
+        self.assertTrue(self.node.acquire())
+        self.assertFalse(self.node.acquire())
+        self.node.release()
+        self.assertTrue(self.node.acquire())
+        self.node.release()
+
+    def test_missing_executor_degrades_then_recovers(self) -> None:
+        bare = NodeContract("omnikali-bare")
+        bare.register("https://bare.trycloudflare.com")
+        bare.ready()
+        task = Orchestrator(bare).submit("say", timeout_s=1)
+        self.assertEqual(TaskStatus.FAILED, task.status)
+        self.assertEqual(NodeState.DEGRADED, bare.node.state)
+        self.assertTrue(bare.recover())
+        self.assertEqual(NodeState.READY, bare.node.state)
+
 
 if __name__ == "__main__":
     unittest.main()
