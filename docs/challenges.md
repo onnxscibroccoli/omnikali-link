@@ -21,10 +21,11 @@ Lived issues from the in-browser workstation, not a wish list.
    search bar is not a blank page.
 
 4. **No nested Kali kernel** — The shell is a real interpreter with a
-   virtual FS, not `/bin/bash` on a Kali VM. `nmap`/`msf`/`sqlmap` against
-   the public internet cannot be made real here, and will not be enabled
-   as a public scanner. Authorized tests on equipment you own belong on a
-   machine you control.
+   virtual FS, not `/bin/bash` on a Kali VM. `apt update` pulls the live
+   kali-rolling Release over HTTPS and `apt upgrade` persists versions in
+   dpkg status — it does not unpack .deb payloads into a kernel. Public
+   scanners are not enabled. Authorized tests on equipment you own belong
+   on a machine you control.
 
 5. **JS-heavy sites** — Proxied HTML with a `<base href>` still drops
    sites that require first-party cookies, service workers, or strict
@@ -51,9 +52,9 @@ Lived issues from the in-browser workstation, not a wish list.
 - Restart protocol + power / wake agents.
 - Same-origin Firefox uplink proxy.
 - docs-sync agent and this documentation set.
+- apt-sync: live kali-rolling Release over HTTPS; apt upgrade persists.
 
 ## Will not do
 
 - Public-internet nmap, masscan, metasploit, sqlmap, gobuster, or nikto.
-  Ownership claims in chat are not authorization we can verify, and this
-  node has no raw sockets anyway.
+  This node has no raw sockets; scanners stay on the isolated lab net.

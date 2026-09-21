@@ -25,6 +25,16 @@ public internet for browsing and GET/HEAD.
 - SSRF guard: no `localhost`, RFC1918, link-local, or userinfo URLs.
 - Cap: ~900 KB body, 12 s timeout, 5 redirects.
 
+## Packages (live kali-rolling)
+
+`apt update` fetches `https://http.kali.org/kali/dists/kali-rolling/Release`
+over the same uplink (followed to a public mirror). Index date is written to
+`/var/lib/apt/lists`. `apt upgrade` / `apt install` persist new versions in
+`/var/lib/dpkg/status` on this node's filesystem.
+
+This upgrades the **workstation package set** (Firefox ESR, curl, git, xfce4,
+…). It is not a nested `dpkg` unpack of `.deb` binaries.
+
 ## What this is not
 
 This is **not** a nested Kali kernel. There are no raw sockets, no real ICMP,
@@ -50,6 +60,6 @@ A Cloudflare 521 on a tunnel does not take the local workstation down.
 supervisor, orchestrator, gateway-discovery, registry, verification,
 reservation, recovery, telemetry, desktop-session, shell, filesystem,
 github-link, lab-network, remote-desktop, power, wake, pointer-sync,
-public-uplink, docs-sync.
+public-uplink, docs-sync, apt-sync.
 
 Pointer: `https://raw.githubusercontent.com/onnxscibroccoli/omnikali-link/main/omnikali.json`
