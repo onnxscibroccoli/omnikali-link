@@ -52,3 +52,10 @@ If changing origin-selection logic, fail closed when the target is unavailable. 
 For current workstation behavior, inspect `kali-node`, `omnikali`, Helix, and Grasshopper before changing this project.
 
 **Bottom line:** a small public pointer/shell whose job is to get the user to a verified OmniKali entry point, not to implement OmniKali itself.
+
+
+## Cross-Repository Knowledge Graph
+
+**GRAPH TAG: `OMNIKALI-KG-2026-09-28`**
+
+Future AI agents MUST read [`.omnikali/project-knowledge-graph.md`](.omnikali/project-knowledge-graph.md) before cross-repository architectural changes. Verify capability with tests and live evidence, preserve restore points, make atomic changes, and update the graph after material architecture or failure knowledge changes.
