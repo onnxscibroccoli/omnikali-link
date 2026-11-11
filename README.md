@@ -1,5 +1,8 @@
 # omnikali-link
 
+
+> **Project reviewer:** [Current evidence classification and ordered remediation](docs/PORTFOLIO_READINESS.md) · [tracking issue](https://github.com/onnxscibroccoli/omnikali-link/issues/8). No unsupported production or professional-experience claims.
+
 **Status:** Public pointer/phone shell; legacy boundary  
 **Repository:** `onnxscibroccoli/omnikali-link`  
 **Documentation snapshot:** 2026-09-28 23:12 EDT
