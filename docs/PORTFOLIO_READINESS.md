@@ -22,6 +22,14 @@ This repository may demonstrate a narrow research, integration or experimental c
 3. Record test command, expected behavior, actual output category, environment/permission boundaries, and CI URL if one exists.
 4. Only publish externally reviewed sanitized evidence, respecting privacy and original-source attribution.
 
+## Evidence recorded 2026-11-11
+
+- `main` `98d8124791eca8530756c8302e7832981386c1a3` has 11 tracked files.
+- No `.github/workflows/`, so there is no CI.
+- No GitHub Pages site. Deployment target is implied by `vercel.json` plus `middleware.js`; no deployment has been verified.
+- `middleware.js` matches only `/origin.json`. It hard-codes a `*.trycloudflare.com` quick-tunnel `FALLBACK`, and `omnikali.json` points to the same host. Quick-tunnel hostnames are ephemeral, so the pointer is likely stale. Liveness is NOT_VERIFIED.
+- The canonical [omnikali `endpoint.json`](https://github.com/onnxscibroccoli/omnikali/blob/main/endpoint.json) records `"omnikaliLink": "retired"` and `"status": "unavailable"`. Treat this repository as **retired pointer source**.
+
 ## Resumption
 
 Follow the [local issue](https://github.com/onnxscibroccoli/omnikali-link/issues/8) and the [central public execution ledger](https://github.com/onnxscibroccoli/broccoli-core/issues/102). The latter does not disclose private project names. Review existing PRs and the current default-branch head before modifying anything. Keep the next change small and reversible; update the issue with its exact commit and test result.
